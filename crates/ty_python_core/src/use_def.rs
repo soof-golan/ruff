@@ -267,8 +267,8 @@ use crate::{BoundnessAnalysis, EnclosingSnapshotResult, PossiblyNarrowedPlaces, 
 mod place_state;
 
 pub use place_state::LiveBinding;
-pub(super) use place_state::PreviousDefinitions;
 pub use place_state::ScopedDefinitionId;
+pub(super) use place_state::{FutureDefinitions, PreviousDefinitions};
 
 /// Uniquely identifies an interned [`Bindings`] entry in [`UseDefMap::interned_bindings`].
 #[newtype_index]
@@ -1211,6 +1211,7 @@ impl<'db> UseDefMapBuilder<'db> {
         place: ScopedPlaceId,
         binding: Definition<'db>,
         previous_definitions: PreviousDefinitions,
+        future_definitions: FutureDefinitions,
     ) {
         let bindings = match place {
             ScopedPlaceId::Symbol(symbol) => self.symbol_states[symbol].bindings(),
@@ -1234,6 +1235,7 @@ impl<'db> UseDefMapBuilder<'db> {
             self.is_class_scope,
             place.is_symbol(),
             previous_definitions,
+            future_definitions,
         );
 
         let bindings = match place {
@@ -1251,6 +1253,7 @@ impl<'db> UseDefMapBuilder<'db> {
             self.is_class_scope,
             place.is_symbol(),
             PreviousDefinitions::AreKept,
+            future_definitions,
         );
     }
 
@@ -1517,6 +1520,7 @@ impl<'db> UseDefMapBuilder<'db> {
             self.is_class_scope,
             place.is_symbol(),
             PreviousDefinitions::AreShadowed,
+            FutureDefinitions::ShadowThisOne,
         );
 
         let reachable_definitions = match place {
@@ -1535,6 +1539,7 @@ impl<'db> UseDefMapBuilder<'db> {
             self.is_class_scope,
             place.is_symbol(),
             PreviousDefinitions::AreKept,
+            FutureDefinitions::ShadowThisOne,
         );
     }
 
@@ -1551,6 +1556,7 @@ impl<'db> UseDefMapBuilder<'db> {
             self.is_class_scope,
             place.is_symbol(),
             PreviousDefinitions::AreShadowed,
+            FutureDefinitions::ShadowThisOne,
         );
     }
 
