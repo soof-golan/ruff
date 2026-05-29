@@ -453,6 +453,69 @@ mod tests {
     }
 
     #[test]
+    fn hover_function_rest_field_lists() {
+        let test = hover_test(
+            r#"
+        def some_func(foo, bar):
+            """Does a thing.
+
+            :param foo: Some desc
+            :param bar: Another desc
+            :returns baz: Return desc
+            :raises ValueError: If the value is invalid
+            """
+            pass
+
+        some_<CURSOR>func(1, 2)
+        "#,
+        );
+
+        assert_snapshot!(test.hover(), @"
+        def some_func(
+            foo,
+            bar
+        ) -> Unknown
+        ---------------------------------------------
+        Does a thing.
+
+        :param foo: Some desc
+        :param bar: Another desc
+        :returns baz: Return desc
+        :raises ValueError: If the value is invalid
+
+        ---------------------------------------------
+        ```python
+        def some_func(
+            foo,
+            bar
+        ) -> Unknown
+        ```
+        ---
+        Does a thing.<HB>
+        <HB>
+        ## Parameters<HB>
+        `foo`: Some desc<HB>
+        `bar`: Another desc<HB>
+        <HB>
+        ## Returns<HB>
+        `baz`: Return desc<HB>
+        <HB>
+        ## Raises<HB>
+        `ValueError`: If the value is invalid
+        ---------------------------------------------
+        info[hover]: Hovered content is
+          --> main.py:12:1
+           |
+        12 | some_func(1, 2)
+           | ^^^^^-^^^
+           | |    |
+           | |    Cursor offset
+           | source
+           |
+        ");
+    }
+
+    #[test]
     fn hover_function_def() {
         let test = hover_test(
             r#"
