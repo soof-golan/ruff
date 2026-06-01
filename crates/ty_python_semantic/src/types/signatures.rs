@@ -986,8 +986,6 @@ impl<'db> Signature<'db> {
             return true;
         }
 
-        // TODO: Expand type aliases here so `type Alias = Self` in a class body
-        // participates in receiver-specific overload pruning.
         expected_self_ty = expected_self_ty.bind_self_typevars(db, self_type);
 
         // `Self` binding can make the receiver annotation trivially compatible.
@@ -1197,8 +1195,6 @@ impl<'db> Signature<'db> {
     }
 
     fn needs_self_mapping(&self, db: &'db dyn Db, receiver_is_removed: bool) -> bool {
-        // TODO: Expand type aliases here so `type Alias = Self` in parameters or returns
-        // triggers binding when a method is accessed on a concrete receiver.
         self.return_ty.contains_self(db)
             || self
                 .parameters

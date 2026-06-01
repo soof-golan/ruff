@@ -82,6 +82,38 @@ def f() -> None:
     reveal_type(x)  # revealed: int | str | bytes
 ```
 
+## `Self`
+
+Type aliases cannot contain `Self`, even when they are defined in a class body:
+
+```py
+from typing import Annotated, Self
+
+class C:
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    type Alias = tuple[Self]
+
+    type Metadata = Annotated[int, tuple[Self]]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    type Bound[T: Self] = T
+```
+
+`Self` is also rejected in alias type-parameter defaults:
+
+```toml
+[environment]
+python-version = "3.13"
+```
+
+```py
+from typing import Self
+
+class C:
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    type Default[T = Self] = T
+```
+
 ## Aliased type aliases
 
 ```py
@@ -359,6 +391,18 @@ IntAndT = TypeAliasType("IntAndT", tuple[int, T], type_params=(T,))
 def f(x: IntAndT[str]) -> None:
     # TODO: This should be `tuple[int, str]`
     reveal_type(x)  # revealed: Unknown
+```
+
+### `Self`
+
+```py
+from typing_extensions import Annotated, Self, TypeAliasType
+
+class C:
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Alias = TypeAliasType("Alias", tuple[Self])
+
+    Metadata = TypeAliasType("Metadata", Annotated[int, tuple[Self]])
 ```
 
 ### Generic value binds type variables to alias definition

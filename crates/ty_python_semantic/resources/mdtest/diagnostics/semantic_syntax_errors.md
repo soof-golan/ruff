@@ -413,7 +413,7 @@ python-version = "3.12"
 
 ```py
 def _():
-    # error: [invalid-type-form] "`yield` expressions are not allowed in type expressions"
+    # error: [invalid-type-form] "`yield` expressions are not allowed in type alias values"
     # error: [invalid-syntax] "yield expression cannot be used within a TypeVar bound"
     type X[T: (yield 1)] = int
 

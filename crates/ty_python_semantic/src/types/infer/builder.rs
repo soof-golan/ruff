@@ -1097,6 +1097,16 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
         // to use end-of-scope semantics. This would require custom and possibly a complex
         // implementation to allow this "split" to happen.
 
+        let previous_in_type_alias = matches!(
+            self.index.scope(definition.file_scope(self.db())).node(),
+            NodeWithScopeKind::TypeAliasTypeParameters(_)
+        )
+        .then(|| {
+            self.context
+                .inference_flags
+                .replace(InferenceFlags::IN_TYPE_ALIAS, true)
+        });
+
         match definition.kind(self.db()) {
             DefinitionKind::Function(function) => {
                 self.infer_function_deferred(definition, function.node(self.module()));
@@ -1117,6 +1127,12 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
                 );
             }
             _ => {}
+        }
+
+        if let Some(previous_in_type_alias) = previous_in_type_alias {
+            self.context
+                .inference_flags
+                .set(InferenceFlags::IN_TYPE_ALIAS, previous_in_type_alias);
         }
     }
 
@@ -1492,7 +1508,14 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
         let binding_context = self.index.expect_single_definition(type_alias);
         let previous_typevar_binding_context =
             self.typevar_binding_context.replace(binding_context);
+        let previous_in_type_alias = self
+            .context
+            .inference_flags
+            .replace(InferenceFlags::IN_TYPE_ALIAS, true);
         self.infer_type_parameters(type_params);
+        self.context
+            .inference_flags
+            .set(InferenceFlags::IN_TYPE_ALIAS, previous_in_type_alias);
         self.typevar_binding_context = previous_typevar_binding_context;
     }
 
@@ -3457,6 +3480,15 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
         let add = self.add_binding(target.into(), definition);
         let target_ty =
             self.infer_assignment_definition_impl(assignment, definition, add.type_context());
+        if matches!(assignment.target_kind(), TargetKind::Single)
+            && target.is_name_expr()
+            && add.declared_ty.is_none()
+            && let Some(diagnostics) = post_inference::pep_613_alias::check_implicit_alias(
+                assignment, definition, target_ty, self,
+            )
+        {
+            self.context.extend(&diagnostics);
+        }
         self.store_expression_type(target, target_ty);
         add.insert(self, target_ty);
     }
@@ -4038,6 +4070,10 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
         // Match the binding context used by eager assignment inference so legacy type variables
         // in the alias value are bound to the alias definition.
         let previous_context = self.typevar_binding_context.replace(definition);
+        let previous_in_type_alias = self
+            .context
+            .inference_flags
+            .replace(InferenceFlags::IN_TYPE_ALIAS, true);
 
         self.infer_type_expression(&arguments.args[1]);
         // Infer keyword arguments (e.g. `type_params`) so their types are stored.
@@ -4046,6 +4082,9 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
         }
 
         self.typevar_binding_context = previous_context;
+        self.context
+            .inference_flags
+            .set(InferenceFlags::IN_TYPE_ALIAS, previous_in_type_alias);
     }
 
     fn infer_annotated_assignment_statement(&mut self, assignment: &ast::StmtAnnAssign) {

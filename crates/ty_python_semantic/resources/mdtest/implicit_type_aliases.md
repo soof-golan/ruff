@@ -28,6 +28,43 @@ def g(x: MyNone):
 g(None)
 ```
 
+## `Self`
+
+Type aliases cannot contain `Self`, even when they are defined in a class body:
+
+```py
+from typing_extensions import Self
+
+class C:
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Alias = tuple[Self]
+
+    A, B = tuple[Self], int
+
+    value: object
+    value = tuple[Self]
+
+    annotated: object = tuple[Self]
+
+    def copy(self) -> Self:
+        return self
+
+    def method(self, flag: bool) -> None:
+        value = self if flag else self.copy()
+        reveal_type(value)  # revealed: Self@method
+
+        copied = self.copy()
+        reveal_type(copied)  # revealed: Self@method
+
+        self.attribute = tuple[Self]
+
+        values: list[object] = []
+        values[0] = tuple[Self]
+
+        # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+        Alias = tuple[Self]
+```
+
 ## Unions
 
 We also support unions in type aliases:
