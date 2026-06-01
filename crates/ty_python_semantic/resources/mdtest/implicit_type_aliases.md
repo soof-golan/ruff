@@ -39,6 +39,14 @@ class C:
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Alias = tuple[Self]
 
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Inner = Self
+    Outer = list[Inner]
+
+    def uses_rejected_alias(self, value: Inner) -> Outer:
+        reveal_type(value)  # revealed: Unknown
+        return []
+
     A, B = tuple[Self], int
 
     value: object

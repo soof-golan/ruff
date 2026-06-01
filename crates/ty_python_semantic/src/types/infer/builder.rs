@@ -880,12 +880,10 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
                         );
                     }
                     DefinitionKind::AnnotatedAssignment(assignment) => {
-                        if let Some(diagnostics) =
-                            post_inference::pep_613_alias::check_pep_613_alias(
-                                assignment, definition, self,
-                            )
-                        {
-                            self.context.extend(&diagnostics);
+                        if let Some(result) = post_inference::pep_613_alias::check_pep_613_alias(
+                            assignment, definition, self,
+                        ) {
+                            self.context.extend(&result.diagnostics);
                         }
                     }
                     _ => {}
@@ -3478,16 +3476,17 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
         let target = assignment.target(self.module());
 
         let add = self.add_binding(target.into(), definition);
-        let target_ty =
+        let mut target_ty =
             self.infer_assignment_definition_impl(assignment, definition, add.type_context());
         if matches!(assignment.target_kind(), TargetKind::Single)
             && target.is_name_expr()
             && add.declared_ty.is_none()
-            && let Some(diagnostics) = post_inference::pep_613_alias::check_implicit_alias(
+            && let Some(result) = post_inference::pep_613_alias::check_implicit_alias(
                 assignment, definition, target_ty, self,
             )
         {
-            self.context.extend(&diagnostics);
+            self.context.extend(&result.diagnostics);
+            target_ty = result.ty;
         }
         self.store_expression_type(target, target_ty);
         add.insert(self, target_ty);
@@ -4522,6 +4521,14 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
                 Type::bool_literal(true)
             } else if self.in_stub() && value.is_ellipsis_literal_expr() {
                 declared.inner_type()
+            } else if is_pep_613_type_alias
+                && (inferred_ty.contains_self(self.db())
+                    || matches!(inferred_ty, Type::SpecialForm(SpecialFormType::TypingSelf)))
+                && let Some(result) =
+                    post_inference::pep_613_alias::check_pep_613_alias(assignment, definition, self)
+                && !result.diagnostics.is_empty()
+            {
+                result.ty
             } else {
                 inferred_ty
             };

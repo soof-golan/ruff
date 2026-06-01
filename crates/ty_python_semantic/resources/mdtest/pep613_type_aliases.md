@@ -527,6 +527,14 @@ class C:
     Alias: TypeAlias = tuple[Self]
 
     Metadata: TypeAlias = Annotated[int, tuple[Self]]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Inner: TypeAlias = Self
+    Outer: TypeAlias = list[Inner]
+
+    def uses_rejected_alias(self, value: Inner) -> Outer:
+        reveal_type(value)  # revealed: Unknown
+        return []
 ```
 
 ## Recursive `TypeIs` and `TypeGuard` aliases don't stack overflow

@@ -6,12 +6,17 @@ use ty_python_core::definition::{
     AnnotatedAssignmentDefinitionKind, AssignmentDefinitionKind, Definition,
 };
 
+pub(crate) struct TypeAliasCheckResult<'db> {
+    pub(crate) ty: Type<'db>,
+    pub(crate) diagnostics: TypeCheckDiagnostics,
+}
+
 pub(crate) fn check_implicit_alias<'db>(
     assignment: &AssignmentDefinitionKind,
     definition: Definition<'db>,
     value_ty: Type<'db>,
     builder: &TypeInferenceBuilder<'db, '_>,
-) -> Option<TypeCheckDiagnostics> {
+) -> Option<TypeAliasCheckResult<'db>> {
     let context = &builder.context;
     let value = assignment.value(context.module());
 
@@ -40,15 +45,18 @@ pub(crate) fn check_implicit_alias<'db>(
     let mut speculative = builder.speculate();
     speculative.typevar_binding_context = Some(definition);
     speculative.context.inference_flags |= InferenceFlags::IN_TYPE_ALIAS;
-    speculative.infer_type_expression(value);
-    Some(speculative.context.finish())
+    let ty = speculative.infer_type_expression(value);
+    Some(TypeAliasCheckResult {
+        ty,
+        diagnostics: speculative.context.finish(),
+    })
 }
 
 pub(crate) fn check_pep_613_alias<'db>(
     assignment: &AnnotatedAssignmentDefinitionKind,
     definition: Definition<'db>,
     builder: &TypeInferenceBuilder<'db, '_>,
-) -> Option<TypeCheckDiagnostics> {
+) -> Option<TypeAliasCheckResult<'db>> {
     let context = &builder.context;
 
     let value = assignment.value(context.module())?;
@@ -65,6 +73,9 @@ pub(crate) fn check_pep_613_alias<'db>(
 
     speculative.typevar_binding_context = Some(definition);
     speculative.context.inference_flags |= InferenceFlags::IN_TYPE_ALIAS;
-    speculative.infer_type_expression(value);
-    Some(speculative.context.finish())
+    let ty = speculative.infer_type_expression(value);
+    Some(TypeAliasCheckResult {
+        ty,
+        diagnostics: speculative.context.finish(),
+    })
 }
