@@ -35,6 +35,15 @@ Type aliases cannot contain `Self`, even when they are defined in a class body:
 ```py
 from typing_extensions import Self
 
+# error: [invalid-type-form] "`Self` cannot be used in a type alias"
+ModuleInner = Self
+
+class UsesModuleInner:
+    def method(self) -> ModuleInner:
+        return self
+
+reveal_type(UsesModuleInner().method())  # revealed: Unknown
+
 class C:
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Alias = tuple[Self]
@@ -71,6 +80,39 @@ class C:
 
         # error: [invalid-type-form] "`Self` cannot be used in a type alias"
         Alias = tuple[Self]
+
+class Base:
+    def method(self) -> None:
+        if isinstance(self, Child):
+            value = self
+            reveal_type(value)  # revealed: Self@method & Child
+
+class Child(Base):
+    pass
+
+class JoinBase:
+    def join(self, other: "JoinBase") -> tuple[int, int]:
+        return 1, 2
+
+    def droplevel(self) -> "JoinBase":
+        return self
+
+    def method(self, other: "JoinBase", flag: bool) -> None:
+        if isinstance(self, JoinChild) and isinstance(other, JoinChild):
+            if flag:
+                left = self
+                right = other.reorder_levels()
+            else:
+                left = self.droplevel()
+                right = other.droplevel()
+
+            first, second = left.join(right)
+            reveal_type(first)  # revealed: int
+            reveal_type(second)  # revealed: int
+
+class JoinChild(JoinBase):
+    def reorder_levels(self) -> "JoinChild":
+        return self
 ```
 
 ## Unions
