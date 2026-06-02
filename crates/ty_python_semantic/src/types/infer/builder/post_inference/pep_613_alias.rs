@@ -46,7 +46,7 @@ pub(crate) fn check_implicit_alias<'db>(
     }
 
     Some(TypeAliasCheckResult {
-        ty: alias_value_from_type_expression(ty, builder, definition),
+        ty: alias_value_from_type_expression(ty, builder),
         diagnostics,
         contains_self_type_alias_error,
     })
@@ -76,7 +76,7 @@ pub(crate) fn check_pep_613_alias<'db>(
     let ty = speculative.infer_type_expression(value);
     let contains_self_type_alias_error = speculative.context.contains_self_type_alias_error();
     Some(TypeAliasCheckResult {
-        ty: alias_value_from_type_expression(ty, builder, definition),
+        ty: alias_value_from_type_expression(ty, builder),
         diagnostics: speculative.context.finish(),
         contains_self_type_alias_error,
     })
@@ -171,9 +171,14 @@ fn implicit_alias_expression_shape_contains_self(
         ast::Expr::Starred(starred) if allow_argument_sequence => {
             implicit_alias_expression_shape_contains_self(&starred.value, builder, false)
         }
-        ast::Expr::NoneLiteral(_) | ast::Expr::StringLiteral(_) | ast::Expr::EllipsisLiteral(_) => {
-            Some(false)
+        ast::Expr::StringLiteral(_) => {
+            let ty = builder.expression_type(value);
+            Some(
+                matches!(ty, Type::SpecialForm(SpecialFormType::TypingSelf))
+                    || ty.contains_self(builder.context.db()),
+            )
         }
+        ast::Expr::NoneLiteral(_) | ast::Expr::EllipsisLiteral(_) => Some(false),
         _ => None,
     }
 }
@@ -247,32 +252,13 @@ fn unsupported_alias_value_contains_self<'db>(
 fn alias_value_from_type_expression<'db>(
     ty: Type<'db>,
     builder: &TypeInferenceBuilder<'db, '_>,
-    definition: Definition<'db>,
 ) -> Type<'db> {
     let db = builder.context.db();
 
     match ty {
-        Type::Union(union) => {
-            let mut elements = union
-                .elements(db)
-                .iter()
-                .copied()
-                .map(|element| alias_value_from_type_expression(element, builder, definition));
-
-            let Some(first) = elements.next() else {
-                return Type::Never;
-            };
-
-            elements.fold(first, |left, right| {
-                UnionTypeInstance::from_value_expression_types(
-                    db,
-                    [left, right],
-                    builder.scope(),
-                    Some(definition),
-                    builder.inference_flags(),
-                )
-            })
-        }
+        Type::Union(_) => Type::KnownInstance(KnownInstanceType::UnionType(
+            UnionTypeInstance::new(db, None, Ok(ty)),
+        )),
         Type::NominalInstance(instance) => match instance.class(db) {
             ClassType::Generic(alias) => Type::GenericAlias(alias),
             ClassType::NonGeneric(class) => Type::ClassLiteral(class),

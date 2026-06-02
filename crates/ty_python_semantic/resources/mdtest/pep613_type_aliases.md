@@ -520,7 +520,9 @@ info: https://typing.python.org/en/latest/spec/annotations.html#type-and-annotat
 Type aliases cannot contain `Self`, even when they are defined in a class body:
 
 ```py
-from typing_extensions import Annotated, Callable, Self, TypeAlias
+from typing_extensions import Annotated, Callable, Self, TypeAlias, TypeVar
+
+T = TypeVar("T")
 
 class C:
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
@@ -528,6 +530,9 @@ class C:
 
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     CallableAlias: TypeAlias = Self | Callable[[int], str]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    GenericAlias: TypeAlias = T | Self
 
     Metadata: TypeAlias = Annotated[int, tuple[Self]]
 
@@ -540,6 +545,9 @@ class C:
 
     def uses_rejected_callable_alias(self, value: CallableAlias) -> None:
         reveal_type(value)  # revealed: Unknown | ((int, /) -> str)
+
+    def uses_rejected_generic_alias(self, value: GenericAlias[int]) -> None:
+        reveal_type(value)  # revealed: int | Unknown
 
     def uses_rejected_alias(self, value: Inner) -> Outer:
         reveal_type(value)  # revealed: Unknown
@@ -556,17 +564,23 @@ invalid-type-form = "ignore"
 ```
 
 ```py
-from typing_extensions import Callable, Self, TypeAlias
+from typing_extensions import Callable, Self, TypeAlias, TypeVar
+
+T = TypeVar("T")
 
 class C:
     Inner: TypeAlias = Self
     CallableAlias: TypeAlias = Self | Callable[[int], str]
+    GenericAlias: TypeAlias = T | Self
 
     def takes(self, value: Inner) -> None:
         pass
 
     def takes_callable(self, value: CallableAlias) -> None:
         reveal_type(value)  # revealed: Unknown | ((int, /) -> str)
+
+    def takes_generic(self, value: GenericAlias[int]) -> None:
+        reveal_type(value)  # revealed: int | Unknown
 
 C().takes(1)
 ```

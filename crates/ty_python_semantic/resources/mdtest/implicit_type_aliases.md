@@ -74,6 +74,12 @@ class C:
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Is = TypeIs[Self]
 
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Stringified = tuple["Self"]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Generic = T | Self
+
     Metadata = Annotated[int, tuple[Self]]
 
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
@@ -85,6 +91,12 @@ class C:
 
     def uses_rejected_legacy_union_alias(self, value: LegacyUnion) -> None:
         reveal_type(value)  # revealed: Unknown | int
+
+    def uses_rejected_stringified_alias(self, value: Stringified) -> None:
+        reveal_type(value)  # revealed: tuple[Unknown]
+
+    def uses_rejected_generic_alias(self, value: Generic[int]) -> None:
+        reveal_type(value)  # revealed: int | Unknown
 
     def uses_rejected_alias(self, value: Inner) -> Outer:
         reveal_type(value)  # revealed: Unknown
