@@ -67,6 +67,9 @@ class C:
         return self
 
     def method(self, flag: bool) -> None:
+        direct = self
+        reveal_type(direct)  # revealed: Self@method
+
         value = self if flag else self.copy()
         reveal_type(value)  # revealed: Self@method
 

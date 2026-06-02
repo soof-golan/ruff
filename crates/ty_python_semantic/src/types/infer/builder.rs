@@ -3481,8 +3481,9 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
         if matches!(assignment.target_kind(), TargetKind::Single)
             && target.is_name_expr()
             && add.declared_ty.is_none()
-            && let Some(result) =
-                post_inference::pep_613_alias::check_implicit_alias(assignment, definition, self)
+            && let Some(result) = post_inference::pep_613_alias::check_implicit_alias(
+                assignment, definition, target_ty, self,
+            )
         {
             self.context.extend(&result.diagnostics);
             target_ty = result.ty;
