@@ -5489,6 +5489,7 @@ impl<'db> Type<'db> {
 
                     Ok(instance.inner(db).to_meta_type(db))
                 }
+                KnownInstanceType::TypeExpression(instance) => Ok(instance.inner(db)),
                 KnownInstanceType::Callable(callable) => Ok(Type::Callable(*callable)),
                 KnownInstanceType::LiteralStringAlias(ty) => Ok(ty.inner(db)),
                 KnownInstanceType::Sentinel(sentinel) => {
@@ -6251,6 +6252,10 @@ impl<'db> Type<'db> {
                     callable_type.find_legacy_typevars_impl(db, binding_context, typevars, visitor);
                 }
                 KnownInstanceType::TypeGenericAlias(ty) => {
+                    ty.inner(db)
+                        .find_legacy_typevars_impl(db, binding_context, typevars, visitor);
+                }
+                KnownInstanceType::TypeExpression(ty) => {
                     ty.inner(db)
                         .find_legacy_typevars_impl(db, binding_context, typevars, visitor);
                 }

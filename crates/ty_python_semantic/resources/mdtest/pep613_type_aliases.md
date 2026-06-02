@@ -520,7 +520,7 @@ info: https://typing.python.org/en/latest/spec/annotations.html#type-and-annotat
 Type aliases cannot contain `Self`, even when they are defined in a class body:
 
 ```py
-from typing_extensions import Annotated, Callable, Self, TypeAlias, TypeVar
+from typing_extensions import Annotated, Callable, Self, TypeAlias, TypeForm, TypeGuard, TypeIs, TypeVar
 
 T = TypeVar("T")
 
@@ -533,6 +533,18 @@ class C:
 
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     GenericAlias: TypeAlias = T | Self
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    SubclassAlias: TypeAlias = type[Self]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    GuardAlias: TypeAlias = TypeGuard[Self]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    IsAlias: TypeAlias = TypeIs[Self]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    FormAlias: TypeAlias = TypeForm[Self]
 
     Metadata: TypeAlias = Annotated[int, tuple[Self]]
 
@@ -549,6 +561,18 @@ class C:
     def uses_rejected_generic_alias(self, value: GenericAlias[int]) -> None:
         reveal_type(value)  # revealed: int | Unknown
 
+    def uses_rejected_subclass_alias(self, value: SubclassAlias) -> None:
+        reveal_type(value)  # revealed: type[Unknown]
+
+    def uses_rejected_guard_alias(self, value: GuardAlias) -> None:
+        reveal_type(value)  # revealed: TypeGuard[Unknown]
+
+    def uses_rejected_is_alias(self, value: IsAlias) -> None:
+        reveal_type(value)  # revealed: TypeIs[Unknown]
+
+    def uses_rejected_form_alias(self, value: FormAlias) -> None:
+        reveal_type(value)  # revealed: TypeForm[Unknown]
+
     def uses_rejected_alias(self, value: Inner) -> Outer:
         reveal_type(value)  # revealed: Unknown
         return []
@@ -564,7 +588,7 @@ invalid-type-form = "ignore"
 ```
 
 ```py
-from typing_extensions import Callable, Self, TypeAlias, TypeVar
+from typing_extensions import Callable, Self, TypeAlias, TypeForm, TypeGuard, TypeIs, TypeVar
 
 T = TypeVar("T")
 
@@ -572,6 +596,10 @@ class C:
     Inner: TypeAlias = Self
     CallableAlias: TypeAlias = Self | Callable[[int], str]
     GenericAlias: TypeAlias = T | Self
+    SubclassAlias: TypeAlias = type[Self]
+    GuardAlias: TypeAlias = TypeGuard[Self]
+    IsAlias: TypeAlias = TypeIs[Self]
+    FormAlias: TypeAlias = TypeForm[Self]
 
     def takes(self, value: Inner) -> None:
         pass
@@ -581,6 +609,18 @@ class C:
 
     def takes_generic(self, value: GenericAlias[int]) -> None:
         reveal_type(value)  # revealed: int | Unknown
+
+    def takes_subclass(self, value: SubclassAlias) -> None:
+        reveal_type(value)  # revealed: type[Unknown]
+
+    def takes_guard(self, value: GuardAlias) -> None:
+        reveal_type(value)  # revealed: TypeGuard[Unknown]
+
+    def takes_is(self, value: IsAlias) -> None:
+        reveal_type(value)  # revealed: TypeIs[Unknown]
+
+    def takes_form(self, value: FormAlias) -> None:
+        reveal_type(value)  # revealed: TypeForm[Unknown]
 
 C().takes(1)
 ```

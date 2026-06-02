@@ -33,7 +33,7 @@ g(None)
 Type aliases cannot contain `Self`, even when they are defined in a class body:
 
 ```py
-from typing_extensions import Annotated, Self, TypeGuard, TypeIs, TypeVar, Union
+from typing_extensions import Annotated, Self, TypeForm, TypeGuard, TypeIs, TypeVar, Union
 
 T = TypeVar("T")
 
@@ -69,10 +69,19 @@ class C:
     Subscripted = Self[int]
 
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    SubscriptedUnion = Self[int] | str
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Subclass = type[Self]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Guard = TypeGuard[Self]
 
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Is = TypeIs[Self]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Form = TypeForm[Self]
 
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Stringified = tuple["Self"]
@@ -91,6 +100,21 @@ class C:
 
     def uses_rejected_legacy_union_alias(self, value: LegacyUnion) -> None:
         reveal_type(value)  # revealed: Unknown | int
+
+    def uses_rejected_subscripted_union_alias(self, value: SubscriptedUnion) -> None:
+        reveal_type(value)  # revealed: Unknown | str
+
+    def uses_rejected_subclass_alias(self, value: Subclass) -> None:
+        reveal_type(value)  # revealed: type[Unknown]
+
+    def uses_rejected_guard_alias(self, value: Guard) -> None:
+        reveal_type(value)  # revealed: TypeGuard[Unknown]
+
+    def uses_rejected_is_alias(self, value: Is) -> None:
+        reveal_type(value)  # revealed: TypeIs[Unknown]
+
+    def uses_rejected_form_alias(self, value: Form) -> None:
+        reveal_type(value)  # revealed: TypeForm[Unknown]
 
     def uses_rejected_stringified_alias(self, value: Stringified) -> None:
         reveal_type(value)  # revealed: tuple[Unknown]

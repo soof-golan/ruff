@@ -1,7 +1,7 @@
 use crate::types::{
     ClassType, DynamicType, KnownInstanceType, SpecialFormType, Type, TypeCheckDiagnostics,
     infer::{InferenceFlags, TypeInferenceBuilder},
-    known_instance::UnionTypeInstance,
+    known_instance::{InternedType, UnionTypeInstance},
 };
 use ruff_python_ast as ast;
 use ty_python_core::definition::{
@@ -236,17 +236,33 @@ fn unsupported_alias_value_contains_self<'db>(
     definition: Definition<'db>,
     builder: &TypeInferenceBuilder<'db, '_>,
 ) -> bool {
-    value.as_subscript_expr().is_some_and(|subscript| {
-        matches!(
-            builder.expression_type(&subscript.value),
-            Type::SpecialForm(SpecialFormType::TypingSelf)
-        ) || alias_value_contains_self(
-            &subscript.slice,
-            builder.expression_type(&subscript.slice),
-            definition,
-            builder,
-        )
-    })
+    match value {
+        ast::Expr::Subscript(subscript) => {
+            matches!(
+                builder.expression_type(&subscript.value),
+                Type::SpecialForm(SpecialFormType::TypingSelf)
+            ) || alias_value_contains_self(
+                &subscript.slice,
+                builder.expression_type(&subscript.slice),
+                definition,
+                builder,
+            )
+        }
+        ast::Expr::BinOp(binary) if binary.op == ast::Operator::BitOr => {
+            alias_value_contains_self(
+                &binary.left,
+                builder.expression_type(&binary.left),
+                definition,
+                builder,
+            ) || alias_value_contains_self(
+                &binary.right,
+                builder.expression_type(&binary.right),
+                definition,
+                builder,
+            )
+        }
+        _ => false,
+    }
 }
 
 fn alias_value_from_type_expression<'db>(
@@ -264,6 +280,12 @@ fn alias_value_from_type_expression<'db>(
             ClassType::NonGeneric(class) => Type::ClassLiteral(class),
         },
         Type::Callable(callable) => Type::KnownInstance(KnownInstanceType::Callable(callable)),
+        Type::SubclassOf(subclass_of) => Type::KnownInstance(KnownInstanceType::TypeGenericAlias(
+            InternedType::new(db, subclass_of.to_instance(db)),
+        )),
+        Type::TypeIs(_) | Type::TypeGuard(_) | Type::TypeForm(_) => {
+            Type::KnownInstance(KnownInstanceType::TypeExpression(InternedType::new(db, ty)))
+        }
         Type::Dynamic(_) | Type::Divergent(_) | Type::Never => ty,
         _ => ty.to_meta_type(db),
     }

@@ -3159,6 +3159,12 @@ impl<'db> FmtDetailed<'db> for DisplayKnownInstanceRepr<'db> {
                 inner.inner(self.db).display(self.db).fmt_detailed(f)?;
                 f.write_str("]'>")
             }
+            KnownInstanceType::TypeExpression(inner) => {
+                f.set_invalid_type_annotation();
+                f.write_str("<special-form '")?;
+                inner.inner(self.db).display(self.db).fmt_detailed(f)?;
+                f.write_str("'>")
+            }
             KnownInstanceType::LiteralStringAlias(_) => f
                 .with_type(KnownClass::Str.to_class_literal(self.db))
                 .write_str("str"),

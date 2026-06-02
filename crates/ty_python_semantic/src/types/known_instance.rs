@@ -115,6 +115,9 @@ pub enum KnownInstanceType<'db> {
     /// An instance of `typing.GenericAlias` representing a `type[...]` expression.
     TypeGenericAlias(InternedType<'db>),
 
+    /// A retained runtime type-expression object used when an invalid alias needs a useful fallback.
+    TypeExpression(InternedType<'db>),
+
     /// An instance of `typing.GenericAlias` representing a `Callable[...]` expression.
     Callable(CallableType<'db>),
 
@@ -175,6 +178,7 @@ pub(super) fn walk_known_instance_type<'db, V: visitor::TypeVisitor<'db> + ?Size
         KnownInstanceType::Literal(ty)
         | KnownInstanceType::Annotated(ty)
         | KnownInstanceType::TypeGenericAlias(ty)
+        | KnownInstanceType::TypeExpression(ty)
         | KnownInstanceType::LiteralStringAlias(ty) => {
             visitor.visit_type(db, ty.inner(db));
         }
@@ -239,6 +243,9 @@ impl<'db> KnownInstanceType<'db> {
             Self::TypeGenericAlias(ty) => ty
                 .recursive_type_normalized_impl(db, div, true)
                 .map(Self::TypeGenericAlias),
+            Self::TypeExpression(ty) => ty
+                .recursive_type_normalized_impl(db, div, true)
+                .map(Self::TypeExpression),
             Self::LiteralStringAlias(ty) => ty
                 .recursive_type_normalized_impl(db, div, true)
                 .map(Self::LiteralStringAlias),
@@ -282,6 +289,7 @@ impl<'db> KnownInstanceType<'db> {
             Self::Literal(_)
             | Self::Annotated(_)
             | Self::TypeGenericAlias(_)
+            | Self::TypeExpression(_)
             | Self::Callable(_) => KnownClass::GenericAlias,
             Self::LiteralStringAlias(_) => KnownClass::Str,
             Self::NewType(_) => KnownClass::NewType,
@@ -316,6 +324,7 @@ impl<'db> KnownInstanceType<'db> {
                 Some(ty.inner(db))
             }
             Self::TypeGenericAlias(instance) => Some(instance.inner(db).to_meta_type(db)),
+            Self::TypeExpression(instance) => Some(instance.inner(db)),
             Self::Callable(callable) => Some(Type::Callable(callable)),
             Self::NewType(newtype) => Some(Type::NewTypeInstance(newtype)),
             Self::Sentinel(sentinel) => {
@@ -334,6 +343,7 @@ impl<'db> KnownInstanceType<'db> {
                 | Self::Literal(_)
                 | Self::Annotated(_)
                 | Self::TypeGenericAlias(_)
+                | Self::TypeExpression(_)
                 | Self::Callable(_)
                 | Self::LiteralStringAlias(_)
                 | Self::NewType(_)
@@ -397,6 +407,13 @@ impl<'db> KnownInstanceType<'db> {
             }
             KnownInstanceType::TypeGenericAlias(ty) => {
                 Type::KnownInstance(KnownInstanceType::TypeGenericAlias(InternedType::new(
+                    db,
+                    ty.inner(db)
+                        .apply_type_mapping_impl(db, type_mapping, tcx, visitor),
+                )))
+            }
+            KnownInstanceType::TypeExpression(ty) => {
+                Type::KnownInstance(KnownInstanceType::TypeExpression(InternedType::new(
                     db,
                     ty.inner(db)
                         .apply_type_mapping_impl(db, type_mapping, tcx, visitor),
