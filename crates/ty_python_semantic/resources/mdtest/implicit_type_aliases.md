@@ -63,6 +63,11 @@ class C:
     Alias = tuple[Self]
 
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    # error: [unresolved-reference] "Name `Missing` used when not defined"
+    # error: [unresolved-reference] "Name `Missing` used when not defined"
+    AliasWithMissing = tuple[Self, Missing]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     LegacyUnion = Union[Self, int]
 
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"

@@ -3488,6 +3488,7 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
                 assignment, definition, target_ty, self,
             )
         {
+            // TODO: Avoid replaying ordinary RHS diagnostics from this alias-context pass.
             self.context.extend(&result.diagnostics);
             target_ty = result.ty;
         }
