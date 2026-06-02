@@ -413,6 +413,7 @@ python-version = "3.12"
 
 ```py
 def _():
+    # Type-parameter bounds currently share the alias-value diagnostic context.
     # error: [invalid-type-form] "`yield` expressions are not allowed in type alias values"
     # error: [invalid-syntax] "yield expression cannot be used within a TypeVar bound"
     type X[T: (yield 1)] = int

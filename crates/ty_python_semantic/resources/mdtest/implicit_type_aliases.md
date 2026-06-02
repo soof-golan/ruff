@@ -71,6 +71,11 @@ class C:
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     SubscriptedUnion = Self[int] | str
 
+    # Each target is checked independently, so chained aliases emit one diagnostic per target.
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    ChainedA = ChainedB = tuple[Self]
+
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Subclass = type[Self]
 

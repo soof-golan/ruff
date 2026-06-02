@@ -576,6 +576,14 @@ class C:
     def uses_rejected_alias(self, value: Inner) -> Outer:
         reveal_type(value)  # revealed: Unknown
         return []
+
+class Stringified:
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Inner: TypeAlias = "Self"
+    Following: TypeAlias = int
+
+    def uses_rejected_alias(self, value: Inner) -> None:
+        reveal_type(value)  # revealed: Unknown
 ```
 
 ## Disabled `invalid-type-form` `Self` fallback
@@ -623,6 +631,13 @@ class C:
         reveal_type(value)  # revealed: TypeForm[Unknown]
 
 C().takes(1)
+
+class Stringified:
+    Inner: TypeAlias = "Self"
+    Following: TypeAlias = int
+
+    def takes(self, value: Inner) -> None:
+        reveal_type(value)  # revealed: Unknown
 ```
 
 ## Recursive `TypeIs` and `TypeGuard` aliases don't stack overflow

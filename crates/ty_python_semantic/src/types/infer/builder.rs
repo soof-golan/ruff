@@ -6130,6 +6130,15 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
 
         if tcx.is_typealias() {
             let aliased_type = self.infer_string_type_expression(literal);
+            if self
+                .context
+                .inference_flags
+                .contains(InferenceFlags::IN_PEP_613_ALIAS_FIRST_PASS)
+                && (matches!(aliased_type, Type::SpecialForm(SpecialFormType::TypingSelf))
+                    || aliased_type.contains_self(self.db()))
+            {
+                return Type::unknown();
+            }
             return Type::KnownInstance(KnownInstanceType::LiteralStringAlias(InternedType::new(
                 self.db(),
                 aliased_type,
