@@ -1118,6 +1118,9 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
             DefinitionKind::ParamSpec(paramspec) => {
                 self.infer_paramspec_deferred(paramspec.node(self.module()));
             }
+            DefinitionKind::TypeVarTuple(typevartuple) => {
+                self.infer_typevartuple_deferred(typevartuple.node(self.module()));
+            }
             DefinitionKind::Assignment(assignment) => {
                 self.infer_assignment_deferred(
                     assignment.target(self.module()),

@@ -112,6 +112,9 @@ from typing import Self
 class C:
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     type Default[T = Self] = T
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    type TypeVarTupleDefault[*Ts = Self] = tuple[*Ts]
 ```
 
 ## Aliased type aliases

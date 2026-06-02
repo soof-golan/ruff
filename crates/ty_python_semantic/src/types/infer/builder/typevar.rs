@@ -662,13 +662,34 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
             name: _,
             default,
         } = node;
-        self.infer_optional_expression(default.as_deref(), TypeContext::default());
+        if default.is_some() {
+            self.deferred.insert(definition);
+        }
         let pep_695_todo = todo_type!("PEP-695 TypeVarTuple definition types");
         self.add_declaration_with_binding(
             node.into(),
             definition,
             &DeclaredAndInferredType::are_the_same_type(pep_695_todo),
         );
+    }
+
+    pub(super) fn infer_typevartuple_deferred(&mut self, node: &'ast ast::TypeParamTypeVarTuple) {
+        let ast::TypeParamTypeVarTuple {
+            range: _,
+            node_index: _,
+            name: _,
+            default: Some(default),
+        } = node
+        else {
+            return;
+        };
+
+        let previous_deferred_state =
+            std::mem::replace(&mut self.deferred_state, DeferredExpressionState::Deferred);
+        // TODO: TypeVarTuple definitions are still modeled as a placeholder type. This only
+        // infers the default expression so we report diagnostics in the right context.
+        self.infer_type_expression(default);
+        self.deferred_state = previous_deferred_state;
     }
 
     pub(super) fn infer_legacy_paramspec(
