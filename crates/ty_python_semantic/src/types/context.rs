@@ -43,6 +43,7 @@ pub(crate) struct InferContext<'db, 'ast> {
     file: File,
     module: &'ast ParsedModuleRef,
     diagnostics: std::cell::RefCell<TypeCheckDiagnostics>,
+    contains_self_type_alias_error: std::cell::Cell<bool>,
     /// This field tracks various flags that control how type inference should behave in the current context.
     pub(crate) inference_flags: InferenceFlags,
     bomb: DebugDropBomb,
@@ -56,6 +57,7 @@ impl<'db, 'ast> InferContext<'db, 'ast> {
             module,
             file: scope.file(db),
             diagnostics: std::cell::RefCell::new(TypeCheckDiagnostics::default()),
+            contains_self_type_alias_error: std::cell::Cell::new(false),
             inference_flags: InferenceFlags::empty(),
             bomb: DebugDropBomb::new(
                 "`InferContext` needs to be explicitly consumed by calling `::finish` to prevent accidental loss of diagnostics.",
@@ -101,6 +103,14 @@ impl<'db, 'ast> InferContext<'db, 'ast> {
 
     pub(crate) fn extend(&mut self, other: &TypeCheckDiagnostics) {
         self.diagnostics.get_mut().extend(other);
+    }
+
+    pub(crate) fn mark_self_type_alias_error(&self) {
+        self.contains_self_type_alias_error.set(true);
+    }
+
+    pub(crate) fn contains_self_type_alias_error(&self) -> bool {
+        self.contains_self_type_alias_error.get()
     }
 
     pub(super) fn is_lint_enabled(&self, lint: &'static LintMetadata) -> bool {

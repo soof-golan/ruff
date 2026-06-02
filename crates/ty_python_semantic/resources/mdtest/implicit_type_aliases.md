@@ -33,10 +33,18 @@ g(None)
 Type aliases cannot contain `Self`, even when they are defined in a class body:
 
 ```py
-from typing_extensions import Self
+from typing_extensions import Annotated, Self, TypeGuard, TypeIs, TypeVar, Union
+
+T = TypeVar("T")
+
+def passthrough(value: T, other: object) -> T:
+    return value
 
 # error: [invalid-type-form] "`Self` cannot be used in a type alias"
 ModuleInner = Self
+
+# error: [invalid-type-form] "`Self` cannot be used in a type alias"
+ModuleUnion = Self | int
 
 class UsesModuleInner:
     def method(self) -> ModuleInner:
@@ -44,13 +52,39 @@ class UsesModuleInner:
 
 reveal_type(UsesModuleInner().method())  # revealed: Unknown
 
+class UsesModuleUnion:
+    def method(self) -> ModuleUnion:
+        return self
+
+reveal_type(UsesModuleUnion().method())  # revealed: Unknown | int
+
 class C:
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Alias = tuple[Self]
 
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    LegacyUnion = Union[Self, int]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Subscripted = Self[int]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Guard = TypeGuard[Self]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    Is = TypeIs[Self]
+
+    Metadata = Annotated[int, tuple[Self]]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Inner = Self
     Outer = list[Inner]
+
+    def uses_rejected_compound_alias(self, value: Alias) -> None:
+        reveal_type(value)  # revealed: tuple[Unknown]
+
+    def uses_rejected_legacy_union_alias(self, value: LegacyUnion) -> None:
+        reveal_type(value)  # revealed: Unknown | int
 
     def uses_rejected_alias(self, value: Inner) -> Outer:
         reveal_type(value)  # revealed: Unknown
@@ -75,6 +109,8 @@ class C:
 
         copied = self.copy()
         reveal_type(copied)  # revealed: Self@method
+
+        value = passthrough(Self, type(self))
 
         self.attribute = tuple[Self]
 
@@ -116,6 +152,27 @@ class JoinBase:
 class JoinChild(JoinBase):
     def reorder_levels(self) -> "JoinChild":
         return self
+```
+
+## Disabled `invalid-type-form` `Self` fallback
+
+Disabling the diagnostic does not change the fallback type:
+
+```toml
+[rules]
+invalid-type-form = "ignore"
+```
+
+```py
+from typing_extensions import Self
+
+class C:
+    Inner = Self
+
+    def takes(self, value: Inner) -> None:
+        pass
+
+C().takes(1)
 ```
 
 ## Unions

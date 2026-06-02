@@ -4525,11 +4525,9 @@ impl<'db, 'ast> TypeInferenceBuilder<'db, 'ast> {
             } else if self.in_stub() && value.is_ellipsis_literal_expr() {
                 declared.inner_type()
             } else if is_pep_613_type_alias
-                && (inferred_ty.contains_self(self.db())
-                    || matches!(inferred_ty, Type::SpecialForm(SpecialFormType::TypingSelf)))
                 && let Some(result) =
                     post_inference::pep_613_alias::check_pep_613_alias(assignment, definition, self)
-                && !result.diagnostics.is_empty()
+                && result.contains_self_type_alias_error()
             {
                 result.ty
             } else {

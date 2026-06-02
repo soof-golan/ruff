@@ -7342,6 +7342,12 @@ pub struct InvalidTypeExpressionError<'db> {
 }
 
 impl<'db> InvalidTypeExpressionError<'db> {
+    pub(crate) fn contains_typing_self_in_type_alias(&self) -> bool {
+        self.invalid_expressions
+            .iter()
+            .any(|error| matches!(error, InvalidTypeExpression::TypingSelfInTypeAlias))
+    }
+
     fn into_fallback_type(
         self,
         context: &InferContext,
@@ -7353,6 +7359,9 @@ impl<'db> InvalidTypeExpressionError<'db> {
             invalid_expressions,
         } = self;
         for error in invalid_expressions {
+            if matches!(error, InvalidTypeExpression::TypingSelfInTypeAlias) {
+                context.mark_self_type_alias_error();
+            }
             let Some(builder) = context.report_lint(&INVALID_TYPE_FORM, node) else {
                 continue;
             };

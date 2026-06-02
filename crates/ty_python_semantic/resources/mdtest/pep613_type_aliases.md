@@ -520,11 +520,14 @@ info: https://typing.python.org/en/latest/spec/annotations.html#type-and-annotat
 Type aliases cannot contain `Self`, even when they are defined in a class body:
 
 ```py
-from typing_extensions import Annotated, Self, TypeAlias
+from typing_extensions import Annotated, Callable, Self, TypeAlias
 
 class C:
     # error: [invalid-type-form] "`Self` cannot be used in a type alias"
     Alias: TypeAlias = tuple[Self]
+
+    # error: [invalid-type-form] "`Self` cannot be used in a type alias"
+    CallableAlias: TypeAlias = Self | Callable[[int], str]
 
     Metadata: TypeAlias = Annotated[int, tuple[Self]]
 
@@ -532,9 +535,40 @@ class C:
     Inner: TypeAlias = Self
     Outer: TypeAlias = list[Inner]
 
+    def uses_rejected_compound_alias(self, value: Alias) -> None:
+        reveal_type(value)  # revealed: tuple[Unknown]
+
+    def uses_rejected_callable_alias(self, value: CallableAlias) -> None:
+        reveal_type(value)  # revealed: Unknown | ((int, /) -> str)
+
     def uses_rejected_alias(self, value: Inner) -> Outer:
         reveal_type(value)  # revealed: Unknown
         return []
+```
+
+## Disabled `invalid-type-form` `Self` fallback
+
+Disabling the diagnostic does not change the fallback type:
+
+```toml
+[rules]
+invalid-type-form = "ignore"
+```
+
+```py
+from typing_extensions import Callable, Self, TypeAlias
+
+class C:
+    Inner: TypeAlias = Self
+    CallableAlias: TypeAlias = Self | Callable[[int], str]
+
+    def takes(self, value: Inner) -> None:
+        pass
+
+    def takes_callable(self, value: CallableAlias) -> None:
+        reveal_type(value)  # revealed: Unknown | ((int, /) -> str)
+
+C().takes(1)
 ```
 
 ## Recursive `TypeIs` and `TypeGuard` aliases don't stack overflow
